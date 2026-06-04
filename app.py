@@ -95,30 +95,32 @@ def index():
     historico = buscar_historico("1mo")
     resumo = buscar_resumo()
 
-    comparativo = {}
-    for nome, dados in historico.items():
-        comparativo[nome] = {
-            "datas": dados["datas"],
-            "perc": normalizar_serie(dados["precos"]),
-            "cor": CORES[nome],
+    # Use ticker codes as keys so frontend selecionados[] aligns with chart slots
+    historico_coded = {}
+    comparativo_coded = {}
+    resumo_ext = []
+    for nome, ticker_sa in ACOES.items():
+        codigo = ticker_sa.replace(".SA", "")
+        cor = CORES[nome]
+        if nome not in historico:
+            continue
+        historico_coded[codigo] = {**historico[nome], "cor": cor}
+        comparativo_coded[codigo] = {
+            "datas": historico[nome]["datas"],
+            "perc": normalizar_serie(historico[nome]["precos"]),
+            "cor": cor,
         }
-    for nome in historico:
-        historico[nome]["cor"] = CORES[nome]
-
-    resumo_ext = [
-        {
-            "ticker": ticker_sa.replace(".SA", ""),
+        resumo_ext.append({
+            "ticker": codigo,
             "preco": resumo[nome]["preco"],
             "variacao": resumo[nome]["variacao"],
-        }
-        for nome, ticker_sa in ACOES.items()
-    ]
+        })
 
     return render_template(
         "index.html",
         resumo_ext=resumo_ext,
-        historico=json.dumps(historico),
-        comparativo=json.dumps(comparativo),
+        historico=json.dumps(historico_coded),
+        comparativo=json.dumps(comparativo_coded),
         tickers_iniciais=TICKERS_INICIAIS,
         ibovespa_tickers=IBOVESPA_TICKERS,
     )

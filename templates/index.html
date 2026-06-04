@@ -148,10 +148,12 @@
   }
 
   function renderizarGraficos(historico, comparativo) {
-    Object.keys(historico).forEach((nome, i) => {
+    selecionados.forEach((ticker, i) => {
+      const dados = historico[ticker];
+      if (!dados) return;
       const titleEl = document.getElementById(`grafico-titulo-${i}`);
-      if (titleEl) titleEl.textContent = nome;
-      Plotly.react(SLOT_IDS[i], traceIndividual(nome, historico[nome]), plotLayout("R$"), plotConfig);
+      if (titleEl) titleEl.textContent = ticker;
+      Plotly.react(SLOT_IDS[i], traceIndividual(ticker, dados), plotLayout("R$"), plotConfig);
     });
     Plotly.react("grafico-comparativo", traceComparativo(comparativo), plotLayout("%"), plotConfig);
   }
