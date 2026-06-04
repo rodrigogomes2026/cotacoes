@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cotações — B3SA3 · PETR4 · ITUB4</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" defer></script>
+</head>
+<body>
+
+<header>
+  <h1>Cotações B3</h1>
+  <span id="ultima-atualizacao">—</span>
+</header>
+
+<main>
+
+  <!-- Cards de resumo -->
+  <section class="cards">
+    {% for nome, dados in resumo.items() %}
+    {% set var = dados.variacao %}
+    {% set classe = 'positivo' if var > 0 else ('negativo' if var < 0 else 'neutro') %}
+    {% set sinal = '+' if var > 0 else '' %}
+    <div class="card">
+      <div class="card-nome">{{ nome }}</div>
+      <div class="card-ticker">{{ ['B3SA3','PETR4','ITUB4'][loop.index0] }}.SA</div>
+      <div class="card-preco">R$ {{ "%.2f"|format(dados.preco) }}</div>
+      <div class="card-var {{ classe }}">{{ sinal }}{{ "%.2f"|format(var) }}% hoje</div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- Controles de período -->
+  <div class="controles">
+    <span>Período:</span>
+    <button class="btn-periodo ativo" data-periodo="1mo">1M</button>
+    <button class="btn-periodo" data-periodo="3mo">3M</button>
+    <button class="btn-periodo" data-periodo="6mo">6M</button>
+    <button class="btn-periodo" data-periodo="1y">1A</button>
+    <span class="spinner" id="spinner"></span>
+    <button class="btn-atualizar" id="btn-atualizar">↻ Atualizar</button>
+  </div>
+
+  <!-- Gráficos individuais -->
+  <section class="graficos-individuais">
+    {% for nome in resumo.keys() %}
+    <div class="grafico-card">
+      <div class="grafico-titulo">{{ nome }}</div>
+      <div id="grafico-{{ nome | lower | replace('ã','a') | replace('ú','u') | replace('é','e') }}" style="height:220px"></div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- Gráfico comparativo -->
+  <div class="grafico-comparativo">
+    <h2>Comparativo — variação acumulada (%)</h2>
+    <div id="grafico-comparativo" style="height:320px"></div>
+  </div>
+
+</main>
+
+<script>
+  const HISTORICO_INICIAL   = {{ historico | safe }};
+  const COMPARATIVO_INICIAL = {{ comparativo | safe }};
+
+  const plotLayout = (yTitle) => ({
+    paper_bgcolor: "transparent",
+    plot_bgcolor:  "transparent",
+    margin: { t: 10, b: 30, l: 50, r: 10 },
+    xaxis: {
+      color: "#8b949e",
+      gridcolor: "#21262d",
+      showline: false,
+      tickfont: { size: 10 },
+    },
+    yaxis: {
+      color: "#8b949e",
+      gridcolor: "#21262d",
+      showline: false,
+      tickfont: { size: 10 },
+      tickprefix: yTitle === "%" ? "" : "R$ ",
+      ticksuffix: yTitle === "%" ? "%" : "",
+    },
+    legend: { font: { color: "#e6edf3", size: 11 } },
+    hovermode: "x unified",
+  });
+
+  const plotConfig = { displayModeBar: false, responsive: true };
+
+  // IDs dos divs individuais, na mesma ordem das chaves do resumo
+  const NOMES = Object.keys(HISTORICO_INICIAL);
+  const DIV_IDS = {
+    "B3":       "grafico-b3",
+    "Petrobras":"grafico-petrobras",
+    "Itaú":     "grafico-itau",
+  };
+
+  function traceIndividual(nome, dados) {
+    return [{
+      x: dados.datas,
+      y: dados.precos,
+      type: "scatter",
+      mode: "lines",
+      name: nome,
+      line: { color: dados.cor, width: 2 },
+      hovertemplate: "R$ %{y:.2f}<extra></extra>",
+    }];
+  }
+
+  function traceComparativo(comparativo) {
+    return Object.entries(comparativo).map(([nome, d]) => ({
+      x: d.datas,
+      y: d.perc,
+      type: "scatter",
+      mode: "lines",
+      name: nome,
+      line: { color: d.cor, width: 2 },
+      hovertemplate: "%{y:+.2f}%<extra>" + nome + "</extra>",
+    }));
+  }
+
+  function renderizarGraficos(historico, comparativo) {
+    NOMES.forEach(nome => {
+      Plotly.react(DIV_IDS[nome], traceIndividual(nome, historico[nome]), plotLayout("R$"), plotConfig);
+    });
+    Plotly.react("grafico-comparativo", traceComparativo(comparativo), plotLayout("%"), plotConfig);
+  }
+
+  // Renderização inicial (dados já vêm do servidor)
+  document.addEventListener("DOMContentLoaded", () => {
+    renderizarGraficos(HISTORICO_INICIAL, COMPARATIVO_INICIAL);
+    atualizarTimestamp();
+  });
+
+  // Troca de período
+  let periodoAtivo = "1mo";
+
+  document.querySelectorAll(".btn-periodo").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const periodo = btn.dataset.periodo;
+      if (periodo === periodoAtivo) return;
+
+      periodoAtivo = periodo;
+      document.querySelectorAll(".btn-periodo").forEach(b => b.classList.remove("ativo"));
+      btn.classList.add("ativo");
+
+      await carregarDados(periodo);
+    });
+  });
+
+  // Botão atualizar
+  document.getElementById("btn-atualizar").addEventListener("click", () => {
+    carregarDados(periodoAtivo);
+  });
+
+  async function carregarDados(periodo) {
+    const spinner = document.getElementById("spinner");
+    spinner.style.display = "inline-block";
+    try {
+      const res  = await fetch(`/api/dados?periodo=${periodo}`);
+      const json = await res.json();
+      renderizarGraficos(json.historico, json.comparativo);
+      atualizarTimestamp();
+    } catch (e) {
+      console.error("Erro ao buscar dados:", e);
+    } finally {
+      spinner.style.display = "none";
+    }
+  }
+
+  function atualizarTimestamp() {
+    const el = document.getElementById("ultima-atualizacao");
+    el.textContent = "Atualizado: " + new Date().toLocaleTimeString("pt-BR");
+  }
+</script>
+
+</body>
+</html>
