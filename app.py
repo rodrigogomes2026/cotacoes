@@ -11,9 +11,11 @@ ACOES = {
     "Petrobras": "PETR4.SA",
     "Itaú": "ITUB4.SA",
 }
+TICKERS_INICIAIS = ["B3SA3", "PETR4", "ITUB4"]
+PALETTE = ["#00b4d8", "#48cae4", "#f77f00"]
+CORES = {"B3": "#00b4d8", "Petrobras": "#48cae4", "Itaú": "#f77f00"}
 
 PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y"}
-CORES = {"B3": "#00b4d8", "Petrobras": "#48cae4", "Itaú": "#f77f00"}
 
 IBOVESPA_TICKERS = [
     "ABEV3", "ASAI3", "AZUL4", "B3SA3", "BBAS3", "BBDC3", "BBDC4",
@@ -29,13 +31,20 @@ IBOVESPA_TICKERS = [
 ]
 
 
-def buscar_historico(periodo="1mo"):
-    tickers = list(ACOES.values())
+def buscar_historico(periodo="1mo", acoes=None):
+    if acoes is None:
+        acoes = ACOES
+    tickers = list(acoes.values())
     df = yf.download(tickers, period=periodo, auto_adjust=True, progress=False)["Close"]
+    if isinstance(df, pd.Series):
+        df = df.to_frame(name=tickers[0])
     df = df.dropna(how="all")
     result = {}
-    for nome, ticker in ACOES.items():
-        serie = df[ticker].dropna()
+    for nome, ticker in acoes.items():
+        try:
+            serie = df[ticker].dropna()
+        except KeyError:
+            continue
         result[nome] = {
             "datas": serie.index.strftime("%Y-%m-%d").tolist(),
             "precos": [round(float(v), 2) for v in serie.values],
@@ -43,9 +52,11 @@ def buscar_historico(periodo="1mo"):
     return result
 
 
-def buscar_resumo():
+def buscar_resumo(acoes=None):
+    if acoes is None:
+        acoes = ACOES
     resumo = {}
-    for nome, ticker in ACOES.items():
+    for nome, ticker in acoes.items():
         ativo = yf.Ticker(ticker)
         hist = ativo.history(period="2d")
         if len(hist) >= 2:
@@ -84,17 +95,33 @@ def index():
             "perc": normalizar_serie(dados["precos"]),
             "cor": CORES[nome],
         }
-
     for nome in historico:
         historico[nome]["cor"] = CORES[nome]
 
+    resumo_ext = [
+        {
+            "ticker": ticker_sa.replace(".SA", ""),
+            "preco": resumo[nome]["preco"],
+            "variacao": resumo[nome]["variacao"],
+        }
+        for nome, ticker_sa in ACOES.items()
+    ]
+
     return render_template(
         "index.html",
-        resumo=resumo,
+        resumo_ext=resumo_ext,
         historico=json.dumps(historico),
         comparativo=json.dumps(comparativo),
-        cores=CORES,
+        tickers_iniciais=TICKERS_INICIAIS,
+        ibovespa_tickers=IBOVESPA_TICKERS,
     )
+
+
+def _acoes_e_cores_from_param(tickers_param):
+    codigos = [t.strip().upper() for t in tickers_param.split(",")][:3]
+    acoes = {c: c + ".SA" for c in codigos}
+    cores = {c: PALETTE[i] for i, c in enumerate(codigos)}
+    return acoes, cores
 
 
 @app.route("/api/dados")
@@ -103,22 +130,34 @@ def api_dados():
     if periodo not in PERIODOS_VALIDOS:
         return jsonify({"erro": "Período inválido"}), 400
 
-    historico = buscar_historico(periodo)
+    tickers_param = request.args.get("tickers")
+    if tickers_param:
+        acoes_uso, cores_uso = _acoes_e_cores_from_param(tickers_param)
+    else:
+        acoes_uso, cores_uso = ACOES, CORES
+
+    historico = buscar_historico(periodo, acoes=acoes_uso)
     comparativo = {}
     for nome, dados in historico.items():
+        cor = cores_uso.get(nome, PALETTE[0])
         comparativo[nome] = {
             "datas": dados["datas"],
             "perc": normalizar_serie(dados["precos"]),
-            "cor": CORES[nome],
+            "cor": cor,
         }
-        historico[nome]["cor"] = CORES[nome]
+        historico[nome]["cor"] = cor
 
     return jsonify({"historico": historico, "comparativo": comparativo})
 
 
 @app.route("/api/resumo")
 def api_resumo():
-    return jsonify(buscar_resumo())
+    tickers_param = request.args.get("tickers")
+    if tickers_param:
+        acoes_uso, _ = _acoes_e_cores_from_param(tickers_param)
+    else:
+        acoes_uso = ACOES
+    return jsonify(buscar_resumo(acoes_uso))
 
 
 _ibovespa_cache: dict = {"data": None, "ts": 0.0}

@@ -27,15 +27,18 @@
 
   <!-- Cards de resumo -->
   <section class="cards">
-    {% for nome, dados in resumo.items() %}
-    {% set var = dados.variacao %}
+    {% for item in resumo_ext %}
+    {% set var = item.variacao %}
     {% set classe = 'positivo' if var > 0 else ('negativo' if var < 0 else 'neutro') %}
     {% set sinal = '+' if var > 0 else '' %}
     <div class="card">
-      <div class="card-nome">{{ nome }}</div>
-      <div class="card-ticker">{{ ['B3SA3','PETR4','ITUB4'][loop.index0] }}.SA</div>
-      <div class="card-preco">R$ {{ "%.2f"|format(dados.preco) }}</div>
-      <div class="card-var {{ classe }}">{{ sinal }}{{ "%.2f"|format(var) }}% hoje</div>
+      <select class="ticker-select" id="ticker-select-{{ loop.index0 }}" data-slot="{{ loop.index0 }}">
+        {% for t in ibovespa_tickers %}
+        <option value="{{ t }}"{% if t == item.ticker %} selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+      <div class="card-preco" id="card-preco-{{ loop.index0 }}">R$ {{ "%.2f"|format(item.preco) }}</div>
+      <div class="card-var {{ classe }}" id="card-var-{{ loop.index0 }}">{{ sinal }}{{ "%.2f"|format(var) }}% hoje</div>
     </div>
     {% endfor %}
   </section>
@@ -65,10 +68,10 @@
 
   <!-- Gráficos individuais -->
   <section class="graficos-individuais">
-    {% for nome in resumo.keys() %}
+    {% for item in resumo_ext %}
     <div class="grafico-card">
-      <div class="grafico-titulo">{{ nome }}</div>
-      <div id="grafico-{{ nome | lower | replace('ã','a') | replace('ú','u') | replace('é','e') }}" style="height:220px"></div>
+      <div class="grafico-titulo" id="grafico-titulo-{{ loop.index0 }}">{{ item.ticker }}</div>
+      <div id="grafico-slot-{{ loop.index0 }}" style="height:220px"></div>
     </div>
     {% endfor %}
   </section>
@@ -84,6 +87,8 @@
 <script>
   const HISTORICO_INICIAL   = {{ historico | safe }};
   const COMPARATIVO_INICIAL = {{ comparativo | safe }};
+  let selecionados = {{ tickers_iniciais | tojson }};
+  const SLOT_IDS = ["grafico-slot-0", "grafico-slot-1", "grafico-slot-2"];
 
   const plotLayout = (yTitle) => ({
     paper_bgcolor: "transparent",
@@ -114,14 +119,6 @@
 
   const plotConfig = { displayModeBar: false, responsive: true };
 
-  // IDs dos divs individuais, na mesma ordem das chaves do resumo
-  const NOMES = Object.keys(HISTORICO_INICIAL);
-  const DIV_IDS = {
-    "B3":       "grafico-b3",
-    "Petrobras":"grafico-petrobras",
-    "Itaú":     "grafico-itau",
-  };
-
   function traceIndividual(nome, dados) {
     return [{
       x: dados.datas,
@@ -147,8 +144,10 @@
   }
 
   function renderizarGraficos(historico, comparativo) {
-    NOMES.forEach(nome => {
-      Plotly.react(DIV_IDS[nome], traceIndividual(nome, historico[nome]), plotLayout("R$"), plotConfig);
+    Object.keys(historico).forEach((nome, i) => {
+      const titleEl = document.getElementById(`grafico-titulo-${i}`);
+      if (titleEl) titleEl.textContent = nome;
+      Plotly.react(SLOT_IDS[i], traceIndividual(nome, historico[nome]), plotLayout("R$"), plotConfig);
     });
     Plotly.react("grafico-comparativo", traceComparativo(comparativo), plotLayout("%"), plotConfig);
   }
@@ -184,7 +183,7 @@
     const spinner = document.getElementById("spinner");
     spinner.style.display = "inline-block";
     try {
-      const res  = await fetch(`/api/dados?periodo=${periodo}`);
+      const res  = await fetch(`/api/dados?periodo=${periodo}&tickers=${selecionados.join(",")}`);
       const json = await res.json();
       renderizarGraficos(json.historico, json.comparativo);
       atualizarTimestamp();
@@ -198,6 +197,44 @@
   function atualizarTimestamp() {
     const el = document.getElementById("ultima-atualizacao");
     el.textContent = "Atualizado: " + new Date().toLocaleTimeString("pt-BR");
+  }
+
+  // Troca de ação nos cards
+  document.querySelectorAll(".ticker-select").forEach(sel => {
+    sel.addEventListener("change", () => trocarAcao(parseInt(sel.dataset.slot), sel.value));
+  });
+
+  async function trocarAcao(slot, novoTicker) {
+    selecionados[slot] = novoTicker;
+    const tickersParam = selecionados.join(",");
+    const spinner = document.getElementById("spinner");
+    spinner.style.display = "inline-block";
+    try {
+      const [resumoRes, dadosRes] = await Promise.all([
+        fetch(`/api/resumo?tickers=${tickersParam}`),
+        fetch(`/api/dados?periodo=${periodoAtivo}&tickers=${tickersParam}`),
+      ]);
+      const resumoData = await resumoRes.json();
+      const dadosData  = await dadosRes.json();
+
+      selecionados.forEach((ticker, i) => {
+        const d = resumoData[ticker];
+        if (!d) return;
+        const cls   = d.variacao > 0 ? "positivo" : d.variacao < 0 ? "negativo" : "neutro";
+        const sinal = d.variacao > 0 ? "+" : "";
+        document.getElementById(`card-preco-${i}`).textContent = `R$ ${d.preco.toFixed(2)}`;
+        const varEl = document.getElementById(`card-var-${i}`);
+        varEl.textContent = `${sinal}${d.variacao.toFixed(2)}% hoje`;
+        varEl.className   = `card-var ${cls}`;
+      });
+
+      renderizarGraficos(dadosData.historico, dadosData.comparativo);
+      atualizarTimestamp();
+    } catch (e) {
+      console.error("Erro ao trocar ação:", e);
+    } finally {
+      spinner.style.display = "none";
+    }
   }
 
   // Ticker IBOVESPA
