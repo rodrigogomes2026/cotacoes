@@ -40,6 +40,18 @@
     {% endfor %}
   </section>
 
+  <!-- Destaques IBOVESPA -->
+  <section class="destaques">
+    <div class="destaque-card">
+      <div class="destaque-header altas-header">▲ Maiores Altas</div>
+      <div class="destaque-lista" id="lista-altas"></div>
+    </div>
+    <div class="destaque-card">
+      <div class="destaque-header baixas-header">▼ Maiores Baixas</div>
+      <div class="destaque-lista" id="lista-baixas"></div>
+    </div>
+  </section>
+
   <!-- Controles de período -->
   <div class="controles">
     <span>Período:</span>
@@ -220,6 +232,35 @@
 
   carregarTicker();
   setInterval(carregarTicker, 5 * 60 * 1000);
+
+  // Destaques IBOVESPA
+  async function carregarDestaques() {
+    try {
+      const res  = await fetch("/api/destaques");
+      const data = await res.json();
+
+      function renderLista(items, id) {
+        document.getElementById(id).innerHTML = items.map((d, i) => {
+          const cls   = d.variacao > 0 ? "positivo" : d.variacao < 0 ? "negativo" : "neutro";
+          const sinal = d.variacao > 0 ? "+" : "";
+          return `<div class="destaque-row">` +
+                 `<span class="destaque-rank">${i + 1}</span>` +
+                 `<span class="destaque-ticker">${d.ticker}</span>` +
+                 `<span class="destaque-preco">R$ ${d.preco.toFixed(2)}</span>` +
+                 `<span class="destaque-var ${cls}">${sinal}${d.variacao.toFixed(2)}%</span>` +
+                 `</div>`;
+        }).join("");
+      }
+
+      renderLista(data.altas,  "lista-altas");
+      renderLista(data.baixas, "lista-baixas");
+    } catch (e) {
+      console.error("Erro nos destaques:", e);
+    }
+  }
+
+  carregarDestaques();
+  setInterval(carregarDestaques, 5 * 60 * 1000);
 </script>
 
 </body>

@@ -172,6 +172,77 @@ main {
 .negativo { color: var(--red); }
 .neutro   { color: var(--muted); }
 
+/* Destaques IBOVESPA */
+.destaques {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.destaque-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.destaque-header {
+  padding: 0.55rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.altas-header {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--green);
+  border-bottom: 1px solid rgba(63, 185, 80, 0.2);
+}
+
+.baixas-header {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--red);
+  border-bottom: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+.destaque-row {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.42rem 1rem;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.destaque-row:last-child {
+  border-bottom: none;
+}
+
+.destaque-rank {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-align: right;
+}
+
+.destaque-ticker {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.destaque-preco {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.destaque-var {
+  font-weight: 600;
+  text-align: right;
+  min-width: 4.5rem;
+}
+
 /* Controles de período */
 .controles {
   display: flex;
@@ -279,7 +350,8 @@ main {
 
 @media (max-width: 900px) {
   .cards,
-  .graficos-individuais {
+  .graficos-individuais,
+  .destaques {
     grid-template-columns: 1fr;
   }
 }

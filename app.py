@@ -1,4 +1,5 @@
 import json
+import time
 from flask import Flask, render_template, jsonify, request
 import yfinance as yf
 import pandas as pd
@@ -120,8 +121,13 @@ def api_resumo():
     return jsonify(buscar_resumo())
 
 
-@app.route("/api/ticker")
-def api_ticker():
+_ibovespa_cache: dict = {"data": None, "ts": 0.0}
+
+
+def _buscar_ibovespa():
+    now = time.time()
+    if _ibovespa_cache["data"] and now - _ibovespa_cache["ts"] < 300:
+        return _ibovespa_cache["data"]
     tickers_sa = [t + ".SA" for t in IBOVESPA_TICKERS]
     df = yf.download(tickers_sa, period="2d", auto_adjust=True, progress=False)["Close"]
     resultado = []
@@ -141,7 +147,24 @@ def api_ticker():
             resultado.append({"ticker": codigo, "preco": preco, "variacao": variacao})
         except Exception:
             continue
-    return jsonify(resultado)
+    _ibovespa_cache["data"] = resultado
+    _ibovespa_cache["ts"] = now
+    return resultado
+
+
+@app.route("/api/ticker")
+def api_ticker():
+    return jsonify(_buscar_ibovespa())
+
+
+@app.route("/api/destaques")
+def api_destaques():
+    dados = _buscar_ibovespa()
+    ordenado = sorted(dados, key=lambda x: x["variacao"], reverse=True)
+    return jsonify({
+        "altas":  ordenado[:10],
+        "baixas": ordenado[-10:][::-1],
+    })
 
 
 if __name__ == "__main__":
