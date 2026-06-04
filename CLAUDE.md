@@ -14,6 +14,25 @@ python app.py
 
 There are no tests or linting configured.
 
+## GitHub — Auto-push
+
+Repository: https://github.com/rodrigogomes2026/cotacoes
+
+A `post-commit` hook (`.git/hooks/post-commit`) runs `git push origin main` automatically after every commit — no manual push needed.
+
+To commit and sync changes:
+```bash
+git add <files>
+git commit -m "mensagem"
+# push happens automatically via the hook
+```
+
+If the hook is ever lost (e.g. after cloning), recreate it:
+```bash
+printf '#!/bin/sh\ngit push origin main 2>&1\n' > .git/hooks/post-commit
+chmod +x .git/hooks/post-commit
+```
+
 ## Architecture
 
 Single-file Flask app (`app.py`) that fetches Brazilian stock quotes from Yahoo Finance and renders them as interactive Plotly.js charts.
