@@ -297,11 +297,12 @@
   // Ticker câmbio + cripto
   function formatarPreco(preco, moeda) {
     let str;
-    if (preco >= 1000000) str = (preco / 1000000).toFixed(2) + "M";
-    else if (preco >= 1000) str = preco.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-    else if (preco < 0.01)  str = preco.toFixed(5);
-    else if (preco < 1)     str = preco.toFixed(4);
-    else                    str = preco.toFixed(2);
+    if      (preco >= 1000000) str = (preco / 1000000).toFixed(2) + "M";
+    else if (preco >= 1000)    str = preco.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+    else if (preco < 0.0001)   str = preco.toFixed(8);
+    else if (preco < 0.01)     str = preco.toFixed(6);
+    else if (preco < 1)        str = preco.toFixed(4);
+    else                       str = preco.toFixed(2);
     return `${moeda} ${str}`;
   }
 

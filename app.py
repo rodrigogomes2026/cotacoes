@@ -20,27 +20,48 @@ PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y", "2y", "3y", "4y", "5y"}
 _PERIODO_YF_NATIVO = {"1mo", "3mo", "6mo", "1y", "2y", "5y"}
 
 MOEDAS_TICKERS = {
-    "USD": ("USDBRL=X",  "R$"),
-    "EUR": ("EURBRL=X",  "R$"),
-    "GBP": ("GBPBRL=X",  "R$"),
-    "JPY": ("JPYBRL=X",  "R$"),
-    "CHF": ("CHFBRL=X",  "R$"),
-    "CAD": ("CADBRL=X",  "R$"),
-    "AUD": ("AUDBRL=X",  "R$"),
-    "CNH": ("CNHBRL=X",  "R$"),
+    "USD": ("USDBRL=X", "R$"),
+    "EUR": ("EURBRL=X", "R$"),
+    "GBP": ("GBPBRL=X", "R$"),
+    "JPY": ("JPYBRL=X", "R$"),
+    "CAD": ("CADBRL=X", "R$"),
+    "AUD": ("AUDBRL=X", "R$"),
+    "CHF": ("CHFBRL=X", "R$"),
+    "CNY": ("CNYBRL=X", "R$"),
+    "HKD": ("HKDBRL=X", "R$"),
+    "NZD": ("NZDBRL=X", "R$"),
+    "SGD": ("SGDBRL=X", "R$"),
+    "SEK": ("SEKBRL=X", "R$"),
+    "KRW": ("KRWBRL=X", "R$"),
+    "NOK": ("NOKBRL=X", "R$"),
+    "MXN": ("MXNBRL=X", "R$"),
+    "INR": ("INRBRL=X", "R$"),
+    "RUB": ("RUBBRL=X", "R$"),
+    "ZAR": ("ZARBRL=X", "R$"),
+    "TRY": ("TRYBRL=X", "R$"),
 }
 
 CRIPTO_TICKERS = {
-    "BTC":   ("BTC-USD",  "US$"),
-    "ETH":   ("ETH-USD",  "US$"),
-    "BNB":   ("BNB-USD",  "US$"),
-    "SOL":   ("SOL-USD",  "US$"),
-    "XRP":   ("XRP-USD",  "US$"),
-    "DOGE":  ("DOGE-USD", "US$"),
-    "ADA":   ("ADA-USD",  "US$"),
-    "AVAX":  ("AVAX-USD", "US$"),
-    "DOT":   ("DOT-USD",  "US$"),
-    "MATIC": ("MATIC-USD","US$"),
+    "BTC":  ("BTC-USD",  "US$"),
+    "ETH":  ("ETH-USD",  "US$"),
+    "USDT": ("USDT-USD", "US$"),
+    "BNB":  ("BNB-USD",  "US$"),
+    "SOL":  ("SOL-USD",  "US$"),
+    "USDC": ("USDC-USD", "US$"),
+    "XRP":  ("XRP-USD",  "US$"),
+    "DOGE": ("DOGE-USD", "US$"),
+    "ADA":  ("ADA-USD",  "US$"),
+    "TON":  ("TON-USD",  "US$"),
+    "AVAX": ("AVAX-USD", "US$"),
+    "SHIB": ("SHIB-USD", "US$"),
+    "TRX":  ("TRX-USD",  "US$"),
+    "LINK": ("LINK-USD", "US$"),
+    "BCH":  ("BCH-USD",  "US$"),
+    "DOT":  ("DOT-USD",  "US$"),
+    "XLM":  ("XLM-USD",  "US$"),
+    "PEPE": ("PEPE-USD", "US$"),
+    "UNI":  ("UNI-USD",  "US$"),
+    "NEAR": ("NEAR-USD", "US$"),
 }
 
 IBOVESPA_TICKERS = [
@@ -249,7 +270,11 @@ def _buscar_moedas_cripto():
         for codigo, (ticker, moeda) in mapa.items():
             try:
                 serie = df[ticker].dropna()
-                decimais = 4 if grupo == "forex" and float(serie.iloc[-1]) < 1 else 2
+                v = float(serie.iloc[-1])
+            if grupo == "forex":
+                decimais = 4 if v < 1 else 2
+            else:
+                decimais = 8 if v < 0.0001 else (6 if v < 0.01 else (4 if v < 1 else 2))
                 if len(serie) >= 2:
                     preco = round(float(serie.iloc[-1]), decimais)
                     variacao = round(
