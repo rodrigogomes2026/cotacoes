@@ -14,6 +14,15 @@
   <span id="ultima-atualizacao">—</span>
 </header>
 
+<div class="ticker-wrap">
+  <div class="ticker-label">IBOVESPA</div>
+  <div class="ticker-viewport">
+    <div class="ticker-track" id="ticker-track">
+      <span class="ticker-loading">carregando cotações…</span>
+    </div>
+  </div>
+</div>
+
 <main>
 
   <!-- Cards de resumo -->
@@ -178,6 +187,39 @@
     const el = document.getElementById("ultima-atualizacao");
     el.textContent = "Atualizado: " + new Date().toLocaleTimeString("pt-BR");
   }
+
+  // Ticker IBOVESPA
+  async function carregarTicker() {
+    const track = document.getElementById("ticker-track");
+    try {
+      const res  = await fetch("/api/ticker");
+      const list = await res.json();
+
+      const buildHtml = () => list.map(d => {
+        const cls   = d.variacao > 0 ? "positivo" : d.variacao < 0 ? "negativo" : "neutro";
+        const sinal = d.variacao > 0 ? "+" : "";
+        return `<span class="ticker-item">` +
+               `<span class="ticker-codigo">${d.ticker}</span>` +
+               `<span class="ticker-preco">R$ ${d.preco.toFixed(2)}</span>` +
+               `<span class="ticker-var ${cls}">${sinal}${d.variacao.toFixed(2)}%</span>` +
+               `</span><span class="ticker-dot">·</span>`;
+      }).join("");
+
+      const half = buildHtml();
+      track.innerHTML = half + half;
+
+      requestAnimationFrame(() => {
+        const halfW = track.scrollWidth / 2;
+        track.style.animationDuration = Math.round(halfW / 80) + "s";
+      });
+    } catch (e) {
+      track.innerHTML = "";
+      console.error("Erro no ticker:", e);
+    }
+  }
+
+  carregarTicker();
+  setInterval(carregarTicker, 5 * 60 * 1000);
 </script>
 
 </body>

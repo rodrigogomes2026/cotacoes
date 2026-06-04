@@ -43,6 +43,85 @@ header span {
   color: var(--muted);
 }
 
+/* Ticker IBOVESPA */
+.ticker-wrap {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: 34px;
+  overflow: hidden;
+}
+
+.ticker-label {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ticker-viewport {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: ticker-scroll 120s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+  font-size: 0.78rem;
+}
+
+.ticker-codigo {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ticker-preco {
+  color: var(--muted);
+}
+
+.ticker-var {
+  font-weight: 600;
+}
+
+.ticker-dot {
+  color: var(--border);
+  font-size: 0.65rem;
+}
+
+.ticker-loading {
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding-left: 1rem;
+  animation: none;
+}
+
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 main {
   max-width: 1400px;
   margin: 0 auto;
