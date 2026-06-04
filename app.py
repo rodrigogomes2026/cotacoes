@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import date, timedelta
 from flask import Flask, render_template, jsonify, request
 import yfinance as yf
 import pandas as pd
@@ -15,7 +16,8 @@ TICKERS_INICIAIS = ["B3SA3", "PETR4", "ITUB4"]
 PALETTE = ["#00b4d8", "#48cae4", "#f77f00"]
 CORES = {"B3": "#00b4d8", "Petrobras": "#48cae4", "Itaú": "#f77f00"}
 
-PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y"}
+PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y", "2y", "3y", "4y", "5y"}
+_PERIODO_YF_NATIVO = {"1mo", "3mo", "6mo", "1y", "2y", "5y"}
 
 IBOVESPA_TICKERS = [
     "ABEV3", "ASAI3", "AZUL4", "B3SA3", "BBAS3", "BBDC3", "BBDC4",
@@ -35,7 +37,12 @@ def buscar_historico(periodo="1mo", acoes=None):
     if acoes is None:
         acoes = ACOES
     tickers = list(acoes.values())
-    df = yf.download(tickers, period=periodo, auto_adjust=True, progress=False)["Close"]
+    if periodo in _PERIODO_YF_NATIVO:
+        df = yf.download(tickers, period=periodo, auto_adjust=True, progress=False)["Close"]
+    else:
+        anos = int(periodo[0])
+        start = (date.today() - timedelta(days=365 * anos)).isoformat()
+        df = yf.download(tickers, start=start, auto_adjust=True, progress=False)["Close"]
     if isinstance(df, pd.Series):
         df = df.to_frame(name=tickers[0])
     df = df.dropna(how="all")
