@@ -13,8 +13,8 @@ ACOES = {
     "Itaú": "ITUB4.SA",
 }
 TICKERS_INICIAIS = ["B3SA3", "PETR4", "ITUB4"]
-PALETTE = ["#00b4d8", "#48cae4", "#3fb950"]
-CORES = {"B3": "#00b4d8", "Petrobras": "#48cae4", "Itaú": "#3fb950"}
+PALETTE = ["#2196f3", "#f77f00", "#3fb950"]
+CORES = {"B3": "#2196f3", "Petrobras": "#f77f00", "Itaú": "#3fb950"}
 
 PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y", "2y", "3y", "4y", "5y"}
 _PERIODO_YF_NATIVO = {"1mo", "3mo", "6mo", "1y", "2y", "5y"}
