@@ -271,17 +271,17 @@ def _buscar_moedas_cripto():
             try:
                 serie = df[ticker].dropna()
                 v = float(serie.iloc[-1])
-            if grupo == "forex":
-                decimais = 4 if v < 1 else 2
-            else:
-                decimais = 8 if v < 0.0001 else (6 if v < 0.01 else (4 if v < 1 else 2))
+                if grupo == "forex":
+                    decimais = 4 if v < 1 else 2
+                else:
+                    decimais = 8 if v < 0.0001 else (6 if v < 0.01 else (4 if v < 1 else 2))
                 if len(serie) >= 2:
-                    preco = round(float(serie.iloc[-1]), decimais)
+                    preco = round(v, decimais)
                     variacao = round(
-                        ((float(serie.iloc[-1]) - float(serie.iloc[-2])) / float(serie.iloc[-2])) * 100, 2
+                        ((v - float(serie.iloc[-2])) / float(serie.iloc[-2])) * 100, 2
                     )
                 elif len(serie) == 1:
-                    preco = round(float(serie.iloc[-1]), decimais)
+                    preco = round(v, decimais)
                     variacao = 0.0
                 else:
                     continue
