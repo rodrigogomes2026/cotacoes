@@ -66,6 +66,14 @@ header span {
   text-transform: uppercase;
 }
 
+.ticker-label-fx {
+  background: #f59e0b;
+}
+
+.ticker-label-cripto {
+  background: #8b5cf6;
+}
+
 .ticker-viewport {
   flex: 1;
   overflow: hidden;

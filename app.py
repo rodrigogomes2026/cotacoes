@@ -19,6 +19,30 @@ CORES = {"B3": "#2196f3", "Petrobras": "#f77f00", "Itaú": "#3fb950"}
 PERIODOS_VALIDOS = {"1mo", "3mo", "6mo", "1y", "2y", "3y", "4y", "5y"}
 _PERIODO_YF_NATIVO = {"1mo", "3mo", "6mo", "1y", "2y", "5y"}
 
+MOEDAS_TICKERS = {
+    "USD": ("USDBRL=X",  "R$"),
+    "EUR": ("EURBRL=X",  "R$"),
+    "GBP": ("GBPBRL=X",  "R$"),
+    "JPY": ("JPYBRL=X",  "R$"),
+    "CHF": ("CHFBRL=X",  "R$"),
+    "CAD": ("CADBRL=X",  "R$"),
+    "AUD": ("AUDBRL=X",  "R$"),
+    "CNH": ("CNHBRL=X",  "R$"),
+}
+
+CRIPTO_TICKERS = {
+    "BTC":   ("BTC-USD",  "US$"),
+    "ETH":   ("ETH-USD",  "US$"),
+    "BNB":   ("BNB-USD",  "US$"),
+    "SOL":   ("SOL-USD",  "US$"),
+    "XRP":   ("XRP-USD",  "US$"),
+    "DOGE":  ("DOGE-USD", "US$"),
+    "ADA":   ("ADA-USD",  "US$"),
+    "AVAX":  ("AVAX-USD", "US$"),
+    "DOT":   ("DOT-USD",  "US$"),
+    "MATIC": ("MATIC-USD","US$"),
+}
+
 IBOVESPA_TICKERS = [
     "ABEV3", "ASAI3", "AZUL4", "B3SA3", "BBAS3", "BBDC3", "BBDC4",
     "BPAC11", "BRAP4", "BRFS3", "BRKM5", "CCRO3", "CMIG4", "COGN3",
@@ -203,6 +227,52 @@ def _buscar_ibovespa():
 @app.route("/api/ticker")
 def api_ticker():
     return jsonify(_buscar_ibovespa())
+
+
+_moedas_cache: dict = {"data": None, "ts": 0.0}
+
+
+def _buscar_moedas_cripto():
+    now = time.time()
+    if _moedas_cache["data"] and now - _moedas_cache["ts"] < 300:
+        return _moedas_cache["data"]
+
+    todos = {**{c: t for c, (t, _) in MOEDAS_TICKERS.items()},
+             **{c: t for c, (t, _) in CRIPTO_TICKERS.items()}}
+    simbolos = list(todos.values())
+    df = yf.download(simbolos, period="2d", auto_adjust=True, progress=False)["Close"]
+    if isinstance(df, pd.Series):
+        df = df.to_frame(name=simbolos[0])
+
+    resultado = []
+    for grupo, mapa in (("forex", MOEDAS_TICKERS), ("cripto", CRIPTO_TICKERS)):
+        for codigo, (ticker, moeda) in mapa.items():
+            try:
+                serie = df[ticker].dropna()
+                decimais = 4 if grupo == "forex" and float(serie.iloc[-1]) < 1 else 2
+                if len(serie) >= 2:
+                    preco = round(float(serie.iloc[-1]), decimais)
+                    variacao = round(
+                        ((float(serie.iloc[-1]) - float(serie.iloc[-2])) / float(serie.iloc[-2])) * 100, 2
+                    )
+                elif len(serie) == 1:
+                    preco = round(float(serie.iloc[-1]), decimais)
+                    variacao = 0.0
+                else:
+                    continue
+                resultado.append({"codigo": codigo, "preco": preco, "variacao": variacao,
+                                   "moeda": moeda, "tipo": grupo})
+            except Exception:
+                continue
+
+    _moedas_cache["data"] = resultado
+    _moedas_cache["ts"] = now
+    return resultado
+
+
+@app.route("/api/moedas-cripto")
+def api_moedas_cripto():
+    return jsonify(_buscar_moedas_cripto())
 
 
 @app.route("/api/destaques")
