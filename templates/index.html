@@ -25,6 +25,18 @@
 
 <main>
 
+  <!-- Destaques IBOVESPA -->
+  <section class="destaques">
+    <div class="destaque-card">
+      <div class="destaque-header altas-header">▲ Maiores Altas</div>
+      <div class="destaque-lista" id="lista-altas"></div>
+    </div>
+    <div class="destaque-card">
+      <div class="destaque-header baixas-header">▼ Maiores Baixas</div>
+      <div class="destaque-lista" id="lista-baixas"></div>
+    </div>
+  </section>
+
   <!-- Cards de resumo -->
   <section class="cards">
     {% for item in resumo_ext %}
@@ -41,18 +53,6 @@
       <div class="card-var {{ classe }}" id="card-var-{{ loop.index0 }}">{{ sinal }}{{ "%.2f"|format(var) }}% hoje</div>
     </div>
     {% endfor %}
-  </section>
-
-  <!-- Destaques IBOVESPA -->
-  <section class="destaques">
-    <div class="destaque-card">
-      <div class="destaque-header altas-header">▲ Maiores Altas</div>
-      <div class="destaque-lista" id="lista-altas"></div>
-    </div>
-    <div class="destaque-card">
-      <div class="destaque-header baixas-header">▼ Maiores Baixas</div>
-      <div class="destaque-lista" id="lista-baixas"></div>
-    </div>
   </section>
 
   <!-- Controles de período -->
